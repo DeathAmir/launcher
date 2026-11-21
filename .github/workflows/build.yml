@@ -54,15 +54,15 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item `
-            -LiteralPath "src-tauri/target/i686-pc-windows-msvc/release/iRx-Launcher.exe" `
-            -Destination "unsigned-iRx-Launcher.exe" `
+            -LiteralPath "src-tauri/target/i686-pc-windows-msvc/release/omp-launcher.exe" `
+            -Destination "iRx-Launcher.exe" `
             -Force
 
       - name: Upload unsigned launcher
         uses: actions/upload-artifact@v7
         id: upload-launcher
         with:
-          path: unsigned-iRx-Launcher.exe
+          path: iRx-Launcher.exe
           if-no-files-found: error
           archive: false
 
