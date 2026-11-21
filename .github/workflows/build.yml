@@ -15,14 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Scoop
-        uses: MinoruSekine/setup-scoop@v5
-
-      - name: Setup NSIS
-        run: |
-          scoop bucket add extras
-          scoop install extras/nsis
-
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -30,7 +22,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly-2024-01-01 # Specific nightly version that works with dll-syringe, remove when it gets fixed so we can use latest
+          toolchain: nightly-2024-01-01
 
       - name: Install frontend dependencies
         run: yarn install
@@ -38,17 +30,12 @@ jobs:
       - name: Install rust i686-pc-windows-msvc target
         run: rustup target add i686-pc-windows-msvc
 
-      - name: Build project
-        run: yarn release
+      - name: Build frontend
+        run: yarn build
 
-      # - name: Generate artifact name
-      #   id: vars
-      #   shell: bash
-      #   run: |
-      #     artifact_name="open.mp-launcher-win-${GITHUB_RUN_ID}"
-      #     echo "artifact_name=${artifact_name}" >> $GITHUB_OUTPUT
-      #     setup_artifact_name="open.mp-launcher-win-setup-${GITHUB_RUN_ID}"
-      #     echo "setup_artifact_name=${setup_artifact_name}" >> $GITHUB_OUTPUT
+      - name: Build launcher (8 jobs)
+        working-directory: src-tauri
+        run: cargo build --release --target i686-pc-windows-msvc -j 8
 
       - name: Prepare unsigned launcher
         shell: pwsh
@@ -65,23 +52,3 @@ jobs:
           path: iRx-Launcher.exe
           if-no-files-found: error
           archive: false
-
-      - name: Make NSIS archive
-        run: yarn installer
-
-      - name: Prepare unsigned installer
-        shell: pwsh
-        run: |
-          Copy-Item `
-            -LiteralPath "src-tauri/nsis/omp-launcher-setup.exe" `
-            -Destination "iRx-Launcher-setup.exe" `
-            -Force
-
-      - name: Upload unsigned installer
-        id: upload-installer
-        uses: actions/upload-artifact@v7
-        with:
-          path: iRx-Launcher-setup.exe
-          if-no-files-found: error
-          archive: false
-
