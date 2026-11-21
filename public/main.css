@@ -97,7 +97,7 @@
 }
 
 .titlebar-button:hover {
-  background: #897af1;
+  background: #F28C28;
 }
 
 @font-face {
@@ -113,7 +113,7 @@
 .loader-dark {
   position: relative;
   border-radius: 1000px;
-  background: linear-gradient(#f07e6e, #84cdfa, #5ad1cd);
+  background: linear-gradient(#ffb347, #ff7a18, #e85d04);
   animation: animate 1.2s linear infinite;
 }
 
@@ -131,7 +131,7 @@
   width: 100%;
   height: 100%;
   border-radius: 1000px;
-  background: linear-gradient(#8477b7, #1f1f23);
+  background: linear-gradient(#ff9d3d, #1f1f23);
 }
 
 .loader-dark span:nth-child(1) {
@@ -163,7 +163,7 @@
 .loader-light {
   position: relative;
   border-radius: 1000px;
-  background: linear-gradient(#8477b7, #ffffff);
+  background: linear-gradient(#ff9d3d, #ffffff);
   animation: animate 1.2s linear infinite;
 }
 
@@ -181,7 +181,7 @@
   width: 100%;
   height: 100%;
   border-radius: 1000px;
-  background: linear-gradient(#8477b7, #ffffff);
+  background: linear-gradient(#ff9d3d, #ffffff);
 }
 
 .loader-light span:nth-child(1) {
