@@ -260,7 +260,7 @@ const WindowTitleBar = memo(() => {
           color={theme.textPrimary}
           style={containerStyles.titleText}
         >
-          Open Multiplayer
+          iRx Launcher
         </Text>
       </View>
       {!IN_GAME && (
