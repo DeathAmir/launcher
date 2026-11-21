@@ -54,7 +54,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
   const [downloadInfo, setDownloadInfo] = useState<DownloadProgress>(
     INITIAL_DOWNLOAD_STATE
   );
-  const [currentTask, setCurrentTask] = useState("Getting ready to launch...");
+  const [currentTask, setCurrentTask] = useState(i18n.t("loading_initializing"));
   const downloadedSize = useRef(0);
   const abortController = useRef<AbortController | null>(null);
 
@@ -66,11 +66,11 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
     const initializeApp = async () => {
       try {
         setLoadingStage(LoadingStage.VALIDATING_FILES);
-        setCurrentTask("Validating resources...");
+        setCurrentTask(i18n.t("loading_validating_resources"));
         await validateResources();
       } catch (error) {
         Log.error("Failed to initialize app:", error);
-        setCurrentTask("Failed to initialize. Please restart the application.");
+        setCurrentTask(i18n.t("loading_failed"));
       }
     };
 
@@ -84,7 +84,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
   const finishLoading = useCallback(
     (delay: number = 1000) => {
       setLoadingStage(LoadingStage.COMPLETE);
-      setCurrentTask("Ready to launch!");
+      setCurrentTask(i18n.t("loading_complete"));
       setTimeout(() => {
         onEnd();
       }, delay);
@@ -116,7 +116,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
 
       try {
         setLoadingStage(LoadingStage.DOWNLOADING_SAMP);
-        setCurrentTask("Downloading SAMP files...");
+        setCurrentTask(i18n.t("loading_downloading_samp"));
         resetDownloadState();
 
         abortController.current = new AbortController();
@@ -136,7 +136,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
               if (downloadedSize.current >= total) {
                 try {
                   setLoadingStage(LoadingStage.EXTRACTING);
-                  setCurrentTask("Extracting files...");
+                  setCurrentTask(i18n.t("loading_extracting"));
 
                   await invoke("extract_7z", {
                     path: archive,
@@ -157,9 +157,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
         await processFileChecksums(false);
       } catch (error) {
         Log.error("SAMP files download failed:", error);
-        setCurrentTask(
-          "Failed to download SAMP files. Please check your connection."
-        );
+        setCurrentTask(i18n.t("loading_download_failed"));
         throw error;
       }
     },
@@ -170,7 +168,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
     async (ompFile: string, link: string) => {
       try {
         setLoadingStage(LoadingStage.DOWNLOADING_OMP);
-        setCurrentTask("Downloading OMP plugin...");
+        setCurrentTask(i18n.t("loading_downloading_omp"));
         resetDownloadState();
 
         abortController.current = new AbortController();
@@ -196,9 +194,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
         await processFileChecksums(false);
       } catch (error) {
         Log.error("OMP file download failed:", error);
-        setCurrentTask(
-          "Failed to download OMP plugin. Please check your connection."
-        );
+        setCurrentTask(i18n.t("loading_download_failed"));
         throw error;
       }
     },
@@ -208,7 +204,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
   const downloadWineOverlayFile = useCallback(
     async (dllPath: string, downloadUrl: string) => {
       setLoadingStage(LoadingStage.DOWNLOADING_WINE_OVERLAY);
-      setCurrentTask("Downloading Wine overlay DLL...");
+      setCurrentTask(i18n.t("loading_downloading_wine"));
       resetDownloadState();
 
       abortController.current = new AbortController();
@@ -281,7 +277,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
   const processOmpPluginVerification =
     useCallback(async (): Promise<boolean> => {
       try {
-        setCurrentTask("Verifying OMP plugin...");
+        setCurrentTask(i18n.t("loading_verifying_omp"));
 
         const currentUpdateInfo = useAppState.getState().updateInfo;
         let updateInfo: UpdateInfo;
@@ -415,7 +411,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
   const processFileChecksums = useCallback(
     async (isInitialLoad = true) => {
       try {
-        setCurrentTask("Validating file checksums...");
+        setCurrentTask(i18n.t("loading_validating_checksums"));
 
         const dir = await path.appLocalDataDir();
         const sampPath = await path.join(dir, "samp");
@@ -464,9 +460,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
         invoke("log", {
           msg: "File checksum processing failed: " + error.toString(),
         });
-        setCurrentTask(
-          "File validation failed. Please restart the application."
-        );
+        setCurrentTask(i18n.t("loading_validating_failed"));
       }
     },
     [
@@ -520,9 +514,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
       await downloadSAMPFiles(sampPath);
     } catch (error) {
       Log.error("Resource validation failed:", error);
-      setCurrentTask(
-        "Resource validation failed. Please restart the application."
-      );
+      setCurrentTask(i18n.t("loading_resource_failed"));
     }
   }, [downloadSAMPFiles, processFileChecksums]);
 
@@ -592,7 +584,7 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
             style={styles.logo}
           />
         </View>
-        <Text semibold size={3} color={theme.textPrimary}>
+        <Text semibold size={3} color={theme.textPrimary} style={{ width: "100%", textAlign: language === "fa" ? "right" : "center", writingDirection: language === "fa" ? "rtl" : "ltr", fontSize: language === "fa" ? sc(19) : undefined }}>
           {currentTask}
         </Text>
         <View style={styles.spacer} />
@@ -606,10 +598,10 @@ const LoadingScreen = ({ onEnd }: LoadingScreenProps) => {
               style={styles.downloadingText}
             >
               {loadingStage === LoadingStage.DOWNLOADING_SAMP
-                ? "Downloading SAMP files:"
+                ? i18n.t("loading_downloading_samp_label")
                 : loadingStage === LoadingStage.DOWNLOADING_OMP
-                  ? "Downloading OMP plugin:"
-                  : "Downloading Wine overlay DLL:"}
+                  ? i18n.t("loading_downloading_omp_label")
+                  : i18n.t("loading_downloading_wine_label")}
             </Text>
             {progressBar}
           </>

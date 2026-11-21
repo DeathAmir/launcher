@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from "react";
 import { ColorValue, Text as RNText, TextProps } from "react-native";
+import { useGenericPersistentState } from "../states/genericStates";
 import { sc } from "../utils/sizeScaler";
 
 interface TextComponentProps extends Omit<TextProps, "style"> {
@@ -42,9 +43,10 @@ const Text = memo<TextComponentProps>(
     children,
     ...rest
   }) => {
+    const { language } = useGenericPersistentState();
     const computedStyle = useMemo(() => {
       const fontSize = size ? SIZE_MAP[size] : sc(12);
-
+      const isPersian = language === "fa";
       const fontFamily =
         bold || semibold
           ? FONT_WEIGHTS.semibold
@@ -57,13 +59,14 @@ const Text = memo<TextComponentProps>(
       return [
         {
           fontSize,
-          fontFamily,
+          fontFamily: isPersian ? "Tahoma" : fontFamily,
+          fontWeight: isPersian && (bold || semibold) ? "800" : "normal",
           color,
           userSelect: selectable ? "auto" : "none",
         } as const,
         style,
       ];
-    }, [size, bold, semibold, light, medium, color, selectable, style]);
+    }, [size, bold, semibold, light, medium, color, selectable, style, language]);
 
     return (
       <RNText numberOfLines={1} style={computedStyle} {...rest}>

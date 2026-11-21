@@ -10,23 +10,23 @@ export interface ThemeColors {
 }
 
 export const darkThemeColors: ThemeColors = {
-  primary: "#F28C28",
-  secondary: "#1A1A1E",
-  textPrimary: "#FAFAFA",
-  textSecondary: "#FFFFFF40",
-  textPlaceholder: "#909090",
-  itemBackgroundColor: "#222227",
-  textInputBackgroundColor: "#16161A",
-  serverListItemBackgroundColor: "#303038",
+  primary: "#F28AA8",
+  secondary: "#111923",
+  textPrimary: "#F8F5F2",
+  textSecondary: "#B8C5CE",
+  textPlaceholder: "#8797A3",
+  itemBackgroundColor: "#1B2935",
+  textInputBackgroundColor: "#0D151E",
+  serverListItemBackgroundColor: "#263846",
 };
 
 export const lightThemeColors: ThemeColors = {
-  primary: "#F28C28",
-  secondary: "#FFFFFF",
-  textPrimary: "#1A1A1E",
-  textSecondary: "#1A1A1E80",
-  textPlaceholder: "#6D7071",
-  itemBackgroundColor: "#F3F6FC",
-  textInputBackgroundColor: "#F3F6FC",
-  serverListItemBackgroundColor: "#E9ECF2",
+  primary: "#E85F8B",
+  secondary: "#F7F4F1",
+  textPrimary: "#17232D",
+  textSecondary: "#52616D",
+  textPlaceholder: "#78858E",
+  itemBackgroundColor: "#FFFFFF",
+  textInputBackgroundColor: "#EBF0F1",
+  serverListItemBackgroundColor: "#E3EAEC",
 };
