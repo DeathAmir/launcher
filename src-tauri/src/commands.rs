@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::Command;
 use crate::{errors::LauncherError, helpers, injector, samp};
 use log::{error, info, warn};
 use md5::compute;
