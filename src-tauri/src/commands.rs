@@ -177,6 +177,64 @@ pub fn log_error(msg: &str) -> () {
     error!("Frontend error: {}", msg);
 }
 
+fn irx_voice_archive_complete(archive_path: &str, gtasa_path: &str) -> std::result::Result<bool, String> {
+    let archive_file = File::open(archive_path)
+        .map_err(|e| format!("Could not open iRxVoice ZIP: {}", e))?;
+    let game_dir = PathBuf::from(gtasa_path);
+    if !game_dir.join("gta_sa.exe").is_file() {
+        return Err("GTA: San Andreas executable was not found".to_string());
+    }
+
+    let mut archive = zip::ZipArchive::new(archive_file)
+        .map_err(|e| format!("Invalid iRxVoice ZIP archive: {}", e))?;
+    let mut found_plugin = false;
+
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index)
+            .map_err(|e| format!("Could not read ZIP entry: {}", e))?;
+        if entry.is_dir() {
+            continue;
+        }
+
+        let relative_path = entry.enclosed_name()
+            .ok_or_else(|| "The ZIP contains an unsafe file path".to_string())?;
+        if entry.unix_mode().map(|mode| mode & 0o170000 == 0o120000).unwrap_or(false) {
+            return Err("The ZIP contains an unsupported symbolic link".to_string());
+        }
+
+        if relative_path.file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| name.eq_ignore_ascii_case("iRxVoice.asi"))
+            .unwrap_or(false) {
+            found_plugin = true;
+        }
+
+        let installed_path = game_dir.join(relative_path);
+        let metadata = match std::fs::metadata(&installed_path) {
+            Ok(metadata) if metadata.is_file() => metadata,
+            _ => return Ok(false),
+        };
+        if metadata.len() != entry.size() {
+            return Ok(false);
+        }
+    }
+
+    Ok(found_plugin)
+}
+
+#[tauri::command]
+pub fn is_irx_voice_archive_installed(archive_path: String, gtasa_path: String) -> std::result::Result<bool, String> {
+    #[cfg(windows)]
+    {
+        irx_voice_archive_complete(&archive_path, &gtasa_path)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (archive_path, gtasa_path);
+        Err("iRxVoice installation is supported on Windows only".to_string())
+    }
+}
+
 #[tauri::command]
 pub fn install_irx_voice_archive(archive_path: String, gtasa_path: String) -> std::result::Result<(), String> {
     #[cfg(windows)]
@@ -190,36 +248,62 @@ pub fn install_irx_voice_archive(archive_path: String, gtasa_path: String) -> st
 
         let mut archive = zip::ZipArchive::new(archive_file)
             .map_err(|e| format!("Invalid iRxVoice ZIP archive: {}", e))?;
-        let mut temporary_path = None;
+        let mut found_plugin = false;
+
+        for index in 0..archive.len() {
+            let entry = archive.by_index(index)
+                .map_err(|e| format!("Could not read ZIP entry: {}", e))?;
+            if entry.is_dir() {
+                continue;
+            }
+            let relative_path = entry.enclosed_name()
+                .ok_or_else(|| "The ZIP contains an unsafe file path".to_string())?;
+            if entry.unix_mode().map(|mode| mode & 0o170000 == 0o120000).unwrap_or(false) {
+                return Err("The ZIP contains an unsupported symbolic link".to_string());
+            }
+            if relative_path.file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name.eq_ignore_ascii_case("iRxVoice.asi"))
+                .unwrap_or(false) {
+                found_plugin = true;
+            }
+        }
+
+        if !found_plugin {
+            return Err("iRxVoice.asi was not found inside the ZIP archive".to_string());
+        }
 
         for index in 0..archive.len() {
             let mut entry = archive.by_index(index)
                 .map_err(|e| format!("Could not read ZIP entry: {}", e))?;
-            let file_name = entry.name().rsplit('/').next().unwrap_or("");
-            if entry.is_file() && file_name.eq_ignore_ascii_case("iRxVoice.asi") {
-                let temp = game_dir.join("iRxVoice.asi.tmp");
-                let mut output = File::create(&temp)
-                    .map_err(|e| format!("Could not create plugin file: {}", e))?;
-                std::io::copy(&mut entry, &mut output)
-                    .map_err(|e| format!("Could not extract iRxVoice.asi: {}", e))?;
-                output.flush().map_err(|e| e.to_string())?;
-                temporary_path = Some(temp);
-                break;
+            let relative_path = entry.enclosed_name()
+                .ok_or_else(|| "The ZIP contains an unsafe file path".to_string())?;
+            if entry.is_dir() {
+                std::fs::create_dir_all(game_dir.join(relative_path))
+                    .map_err(|e| format!("Could not create GTA folder: {}", e))?;
+                continue;
             }
+
+            if entry.unix_mode().map(|mode| mode & 0o170000 == 0o120000).unwrap_or(false) {
+                return Err("The ZIP contains an unsupported symbolic link".to_string());
+            }
+
+            let destination = game_dir.join(relative_path);
+            let parent = destination.parent()
+                .ok_or_else(|| "Invalid destination path in ZIP".to_string())?;
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Could not create destination folder: {}", e))?;
+
+            let mut output = File::create(&destination)
+                .map_err(|e| format!("Could not replace '{}': {}", destination.display(), e))?;
+            std::io::copy(&mut entry, &mut output)
+                .map_err(|e| format!("Could not extract '{}': {}", destination.display(), e))?;
+            output.flush()
+                .map_err(|e| format!("Could not finish writing '{}': {}", destination.display(), e))?;
         }
 
-        let temporary_path = temporary_path
-            .ok_or_else(|| "iRxVoice.asi was not found inside the ZIP archive".to_string())?;
-        let final_path = game_dir.join("iRxVoice.asi");
-        if final_path.exists() {
-            std::fs::remove_file(&final_path)
-                .map_err(|e| format!("Could not replace old iRxVoice.asi: {}", e))?;
-        }
-        std::fs::rename(&temporary_path, &final_path)
-            .map_err(|e| format!("Could not finish installing iRxVoice.asi: {}", e))?;
-
-        if !final_path.is_file() {
-            return Err("iRxVoice.asi installation could not be verified".to_string());
+        if !irx_voice_archive_complete(&archive_path, &gtasa_path)? {
+            return Err("Not all iRxVoice archive files were installed successfully".to_string());
         }
         Ok(())
     }

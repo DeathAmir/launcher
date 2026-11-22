@@ -230,6 +230,7 @@ async fn run_tauri_app() -> Result<()> {
             commands::get_checksum_of_files,
             commands::extract_7z,
             commands::copy_files_to_gtasa,
+            commands::is_irx_voice_archive_installed,
             commands::install_irx_voice_archive,
             query::query_server,
             ipc::send_message_to_game

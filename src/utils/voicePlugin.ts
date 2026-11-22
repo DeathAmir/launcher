@@ -31,25 +31,34 @@ export const ensureIrxVoice = async (
 
   const archiveHash = await sha256(await fs.readBinaryFile(archivePath));
   const hasPlugin = await fs.exists(pluginPath);
-  const installedHash = await fs.exists(markerPath)
+  const hasMarker = await fs.exists(markerPath);
+  const installedHash = hasMarker
     ? (await fs.readTextFile(markerPath)).trim().toLowerCase()
     : "";
+  const archiveComplete = await invoke<boolean>("is_irx_voice_archive_installed", {
+    archivePath,
+    gtasaPath
+  });
 
-  if (hasPlugin && installedHash === archiveHash.toLowerCase()) {
+  if (archiveComplete && hasMarker && installedHash === archiveHash.toLowerCase()) {
     onProgress(100);
     await fs.removeFile(archivePath).catch(() => {});
     return true;
   }
 
-  if (hasPlugin && !(await confirmUpdate())) {
+  if ((hasPlugin || hasMarker || archiveComplete) && !(await confirmUpdate())) {
     await fs.removeFile(archivePath).catch(() => {});
     return false;
   }
 
   await invoke("install_irx_voice_archive", { archivePath, gtasaPath });
 
-  if (!(await fs.exists(pluginPath))) {
-    throw new Error("نصب فایل iRxVoice.asi تأیید نشد.");
+  const installedComplete = await invoke<boolean>("is_irx_voice_archive_installed", {
+    archivePath,
+    gtasaPath
+  });
+  if (!installedComplete || !(await fs.exists(pluginPath))) {
+    throw new Error("نصب کامل فایل‌های iRxVoice تأیید نشد.");
   }
 
   await fs.writeTextFile(markerPath, archiveHash);
