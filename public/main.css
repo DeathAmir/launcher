@@ -42,5 +42,5 @@
 
 @font-face { font-family: "Vazir"; src: url("fonts/Vazir-Regular-FD.woff2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
 @font-face { font-family: "Vazir"; src: url("fonts/Vazir-Bold-FD.woff2") format("woff2"); font-style: normal; font-weight: 700 900; font-display: swap; }
-html, body, #root { direction: rtl; font-family: "Vazir", sans-serif !important; }
+html, body, #root { font-family: "Vazir", sans-serif !important; }
 body, body * { font-family: "Vazir", sans-serif; }
