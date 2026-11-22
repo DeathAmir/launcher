@@ -134,6 +134,6 @@ export default {
   loading_resource_failed: "بررسی منابع ناموفق بود؛ لطفاً لانچر را دوباره اجرا کن.",
   loading_downloading_samp_label: "دریافت فایل‌های SA-MP:",
   loading_downloading_omp_label: "دریافت افزونه iRx Launcher:",
-  loading_downloading_wine_label: "دریافت فایل سازگاری Wine:"
+  loading_downloading_wine_label: "دریافت فایل سازگاری Wine:",
   continue: "ادامه",
 };
