@@ -22,7 +22,7 @@ const RecentlyJoined = () => {
 
   const list = useMemo(() => {
     const { sortPing, sortPlayer, sortName, sortMode } = searchData;
-    let list = sortAndSearchInServerList(recentlyJoined, searchData);
+    let list = sortAndSearchInServerList(recentlyJoined.filter((server) => server.port === 7777 && (server.ip === "play.irautox.ir" || server.ip === "5.57.37.122")), searchData);
 
     const noSortingApplied =
       sortPlayer === "none" &&

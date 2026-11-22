@@ -20,7 +20,7 @@ const Partners = () => {
   }, []);
 
   const list = useMemo(() => {
-    return sortAndSearchInServerList(servers, searchData, true);
+    return sortAndSearchInServerList(servers.filter((server) => server.port === 7777 && (server.ip === "play.irautox.ir" || server.ip === "5.57.37.122")), searchData, true);
   }, [servers, searchData]);
 
   const onSelect = (server: Server) => {
