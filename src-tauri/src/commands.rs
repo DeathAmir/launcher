@@ -222,6 +222,45 @@ fn irx_voice_archive_complete(archive_path: &str, gtasa_path: &str) -> std::resu
     Ok(found_plugin)
 }
 
+fn irx_voice_archive_has_files(archive_path: &str, gtasa_path: &str) -> std::result::Result<bool, String> {
+    let archive_file = File::open(archive_path)
+        .map_err(|e| format!("Could not open iRxVoice ZIP: {}", e))?;
+    let game_dir = PathBuf::from(gtasa_path);
+    let mut archive = zip::ZipArchive::new(archive_file)
+        .map_err(|e| format!("Invalid iRxVoice ZIP archive: {}", e))?;
+
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index)
+            .map_err(|e| format!("Could not read ZIP entry: {}", e))?;
+        if entry.is_dir() {
+            continue;
+        }
+        let relative_path = entry.enclosed_name()
+            .ok_or_else(|| "The ZIP contains an unsafe file path".to_string())?;
+        if entry.unix_mode().map(|mode| mode & 0o170000 == 0o120000).unwrap_or(false) {
+            return Err("The ZIP contains an unsupported symbolic link".to_string());
+        }
+        if game_dir.join(relative_path).is_file() {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+#[tauri::command]
+pub fn has_irx_voice_archive_files(archive_path: String, gtasa_path: String) -> std::result::Result<bool, String> {
+    #[cfg(windows)]
+    {
+        irx_voice_archive_has_files(&archive_path, &gtasa_path)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (archive_path, gtasa_path);
+        Err("iRxVoice installation is supported on Windows only".to_string())
+    }
+}
+
 #[tauri::command]
 pub fn is_irx_voice_archive_installed(archive_path: String, gtasa_path: String) -> std::result::Result<bool, String> {
     #[cfg(windows)]

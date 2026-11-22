@@ -39,6 +39,10 @@ export const ensureIrxVoice = async (
     archivePath,
     gtasaPath
   });
+  const hasArchiveFiles = await invoke<boolean>("has_irx_voice_archive_files", {
+    archivePath,
+    gtasaPath
+  });
 
   if (archiveComplete && hasMarker && installedHash === archiveHash.toLowerCase()) {
     onProgress(100);
@@ -46,7 +50,7 @@ export const ensureIrxVoice = async (
     return true;
   }
 
-  if ((hasPlugin || hasMarker || archiveComplete) && !(await confirmUpdate())) {
+  if ((hasPlugin || hasMarker || hasArchiveFiles || archiveComplete) && !(await confirmUpdate())) {
     await fs.removeFile(archivePath).catch(() => {});
     return false;
   }
