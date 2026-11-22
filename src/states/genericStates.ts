@@ -49,13 +49,14 @@ const useGenericPersistentState = create<GenericPersistentStates>()(
   persist(
     (set) => ({
       sideLists: true,
-      language: "en",
+      language: "fa",
       showSideLists: (show: boolean) => set(() => ({ sideLists: show })),
-      setLanguage: (lang) => set(() => ({ language: lang })),
+      setLanguage: () => set(() => ({ language: "fa" })),
     }),
     {
       name: "generic-state-storage",
       storage: createJSONStorage(() => stateStorage),
+      onRehydrateStorage: () => (state) => state?.setLanguage("fa"),
     }
   )
 );

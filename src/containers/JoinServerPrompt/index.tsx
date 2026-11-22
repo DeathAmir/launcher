@@ -236,12 +236,36 @@ const JoinServerPrompt = () => {
         updateInFavoritesList(srvCpy);
         updateInRecentlyJoinedList(srvCpy);
       }
-      if (isIrxServer && gtasaPath && nickname &&
-        (await fs.exists(await path.join(gtasaPath, "gta_sa.exe")))) {
+      if (isIrxServer && (!gtasaPath || !nickname || !(await fs.exists(await path.join(gtasaPath, "gta_sa.exe"))))) {
+        showMessageBox({
+          title: "iRxVoice",
+          description: "ابتدا مسیر معتبر GTA: San Andreas و نام مستعار خود را در تنظیمات مشخص کنید.",
+          buttons: [{ title: t("close"), onPress: hideMessageBox }],
+        });
+        return;
+      }
+      if (isIrxServer) {
         setVoiceLoading(true);
         setVoiceProgress(0);
         try {
-          await ensureIrxVoice(gtasaPath, setVoiceProgress);
+          const installed = await ensureIrxVoice(
+            gtasaPath,
+            setVoiceProgress,
+            () => new Promise<boolean>((resolve) => {
+              showMessageBox({
+                title: "به‌روزرسانی iRxVoice",
+                description: "نسخه جدید افزونه ویس‌چت دریافت شده است. آیا می‌خواهید آن را نصب کنید؟",
+                buttons: [
+                  { title: t("cancel"), onPress: () => { hideMessageBox(); resolve(false); } },
+                  { title: "به‌روزرسانی", onPress: () => { hideMessageBox(); resolve(true); } },
+                ],
+              });
+            })
+          );
+          if (!installed) {
+            setVoiceLoading(false);
+            return;
+          }
         } catch (error) {
           showMessageBox({ title: "iRxVoice", description: String(error),
             buttons: [{ title: t("close"), onPress: hideMessageBox }] });

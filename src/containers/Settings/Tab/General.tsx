@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: sc(5),
     // @ts-ignore
     outlineStyle: "none",
-    fontFamily: "Proxima Nova Regular",
+    fontFamily: "Vazir",
     fontSize: sc(17),
   },
   browseButton: {

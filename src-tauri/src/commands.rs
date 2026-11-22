@@ -5,7 +5,7 @@ use log::{error, info, warn};
 use md5::compute;
 use sevenz_rust::decompress_file;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 
 #[tauri::command]
 pub async fn inject(
@@ -182,21 +182,51 @@ pub fn log_error(msg: &str) -> () {
 pub fn install_irx_voice_archive(archive_path: String, gtasa_path: String) -> std::result::Result<(), String> {
     #[cfg(windows)]
     {
-        let archive = PathBuf::from(&archive_path);
+        let archive_file = File::open(&archive_path)
+            .map_err(|e| format!("Could not open iRxVoice ZIP: {}", e))?;
         let game_dir = PathBuf::from(&gtasa_path);
-        if !archive.is_file() { return Err("iRxVoice archive was not downloaded".to_string()); }
-        if !game_dir.join("gta_sa.exe").is_file() { return Err("GTA: San Andreas executable was not found".to_string()); }
-        let extract_dir = std::env::temp_dir().join(format!("irxvoice-{}", std::process::id()));
-        if extract_dir.exists() { std::fs::remove_dir_all(&extract_dir).map_err(|e| e.to_string())?; }
-        std::fs::create_dir_all(&extract_dir).map_err(|e| e.to_string())?;
-        let extract_path = extract_dir.to_string_lossy().to_string();
-        let script = "$ErrorActionPreference = 'Stop'; Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force; $plugin = Get-ChildItem -LiteralPath $args[1] -Filter 'iRxVoice.asi' -File -Recurse | Select-Object -First 1; if ($null -eq $plugin) { exit 3 }; Copy-Item -LiteralPath $plugin.FullName -Destination (Join-Path $args[2] 'iRxVoice.asi') -Force";
-        let status = Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script, &archive_path, &extract_path, &gtasa_path]).status().map_err(|e| format!("Could not start ZIP extraction: {}", e))?;
-        let _ = std::fs::remove_dir_all(&extract_dir);
-        if !status.success() { return Err("Could not extract iRxVoice.asi from the downloaded ZIP".to_string()); }
-        if !game_dir.join("iRxVoice.asi").is_file() { return Err("iRxVoice.asi installation could not be verified".to_string()); }
+        if !game_dir.join("gta_sa.exe").is_file() {
+            return Err("GTA: San Andreas executable was not found".to_string());
+        }
+
+        let mut archive = zip::ZipArchive::new(archive_file)
+            .map_err(|e| format!("Invalid iRxVoice ZIP archive: {}", e))?;
+        let mut temporary_path = None;
+
+        for index in 0..archive.len() {
+            let mut entry = archive.by_index(index)
+                .map_err(|e| format!("Could not read ZIP entry: {}", e))?;
+            let file_name = entry.name().rsplit('/').next().unwrap_or("");
+            if entry.is_file() && file_name.eq_ignore_ascii_case("iRxVoice.asi") {
+                let temp = game_dir.join("iRxVoice.asi.tmp");
+                let mut output = File::create(&temp)
+                    .map_err(|e| format!("Could not create plugin file: {}", e))?;
+                std::io::copy(&mut entry, &mut output)
+                    .map_err(|e| format!("Could not extract iRxVoice.asi: {}", e))?;
+                output.flush().map_err(|e| e.to_string())?;
+                temporary_path = Some(temp);
+                break;
+            }
+        }
+
+        let temporary_path = temporary_path
+            .ok_or_else(|| "iRxVoice.asi was not found inside the ZIP archive".to_string())?;
+        let final_path = game_dir.join("iRxVoice.asi");
+        if final_path.exists() {
+            std::fs::remove_file(&final_path)
+                .map_err(|e| format!("Could not replace old iRxVoice.asi: {}", e))?;
+        }
+        std::fs::rename(&temporary_path, &final_path)
+            .map_err(|e| format!("Could not finish installing iRxVoice.asi: {}", e))?;
+
+        if !final_path.is_file() {
+            return Err("iRxVoice.asi installation could not be verified".to_string());
+        }
         Ok(())
     }
     #[cfg(not(windows))]
-    { let _ = (archive_path, gtasa_path); Err("iRxVoice installation is supported on Windows only".to_string()) }
+    {
+        let _ = (archive_path, gtasa_path);
+        Err("iRxVoice installation is supported on Windows only".to_string())
+    }
 }
