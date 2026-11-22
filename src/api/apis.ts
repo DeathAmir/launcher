@@ -15,7 +15,7 @@ export const getCachedList = async (): Promise<ApiResponse<Server[]>> => {
     ip: "play.irautox.ir", port: 7777, hostname: "IRAutoX",
     playerCount: 0, maxPlayers: 100, gameMode: "IRAutoX", language: "Persian",
     hasPassword: false, version: "0.3.7", usingOmp: false, partner: true,
-    ping: PING_TIMEOUT_VALUE, players: [], password: "", rules: {},
+    ping: PING_TIMEOUT_VALUE, players: [], password: "", rules: {} as Server["rules"],
   };
   const { useServers, usePersistentServers } = await import("../states/servers");
   useServers.getState().setServers([server]);
