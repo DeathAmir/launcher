@@ -1,9 +1,8 @@
 import api from "../api/config";
 import { UpdateInfo } from "../states/app";
-import { mapAPIResponseServerListToAppStructure } from "../utils/helpers";
 import { Log } from "../utils/logger";
 import { PING_TIMEOUT_VALUE } from "../utils/query";
-import { APIResponseServer, Server } from "../utils/types";
+import { Server } from "../utils/types";
 
 interface ApiResponse<T> {
   success: boolean;
