@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+use std::process::Command;
 use crate::{errors::LauncherError, helpers, injector, samp};
 use log::{error, info, warn};
 use md5::compute;
@@ -174,4 +176,27 @@ pub fn log_warn(msg: &str) -> () {
 #[tauri::command]
 pub fn log_error(msg: &str) -> () {
     error!("Frontend error: {}", msg);
+}
+
+#[tauri::command]
+pub fn install_irx_voice_archive(archive_path: String, gtasa_path: String) -> std::result::Result<(), String> {
+    #[cfg(windows)]
+    {
+        let archive = PathBuf::from(&archive_path);
+        let game_dir = PathBuf::from(&gtasa_path);
+        if !archive.is_file() { return Err("iRxVoice archive was not downloaded".to_string()); }
+        if !game_dir.join("gta_sa.exe").is_file() { return Err("GTA: San Andreas executable was not found".to_string()); }
+        let extract_dir = std::env::temp_dir().join(format!("irxvoice-{}", std::process::id()));
+        if extract_dir.exists() { std::fs::remove_dir_all(&extract_dir).map_err(|e| e.to_string())?; }
+        std::fs::create_dir_all(&extract_dir).map_err(|e| e.to_string())?;
+        let extract_path = extract_dir.to_string_lossy().to_string();
+        let script = "$ErrorActionPreference = 'Stop'; Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force; $plugin = Get-ChildItem -LiteralPath $args[1] -Filter 'iRxVoice.asi' -File -Recurse | Select-Object -First 1; if ($null -eq $plugin) { exit 3 }; Copy-Item -LiteralPath $plugin.FullName -Destination (Join-Path $args[2] 'iRxVoice.asi') -Force";
+        let status = Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script, &archive_path, &extract_path, &gtasa_path]).status().map_err(|e| format!("Could not start ZIP extraction: {}", e))?;
+        let _ = std::fs::remove_dir_all(&extract_dir);
+        if !status.success() { return Err("Could not extract iRxVoice.asi from the downloaded ZIP".to_string()); }
+        if !game_dir.join("iRxVoice.asi").is_file() { return Err("iRxVoice.asi installation could not be verified".to_string()); }
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    { let _ = (archive_path, gtasa_path); Err("iRxVoice installation is supported on Windows only".to_string()) }
 }

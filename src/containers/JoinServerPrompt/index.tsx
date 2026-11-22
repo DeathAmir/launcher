@@ -1,4 +1,4 @@
-import { fs } from "@tauri-apps/api";
+import { fs, path } from "@tauri-apps/api";
 import { t } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -29,6 +29,8 @@ import {
 } from "../../utils/helpers";
 import { sc } from "../../utils/sizeScaler";
 import { SAMPDLLVersions } from "../../utils/types";
+import { ensureIrxVoice } from "../../utils/voicePlugin";
+import { useMessageBox } from "../../states/messageModal";
 
 const JoinServerPrompt = () => {
   const { visible, server, showPrompt } = useJoinServerPrompt();
@@ -48,6 +50,9 @@ const JoinServerPrompt = () => {
   >();
   const [perServerNickname, setPerServerNickname] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [voiceProgress, setVoiceProgress] = useState(0);
+  const { showMessageBox, hideMessageBox } = useMessageBox();
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { nickName, gtasaPath, sampVersion, setSampVersion, recentNicknames } =
     useSettings();
@@ -220,35 +225,49 @@ const JoinServerPrompt = () => {
   );
 
   const handleConnect = useCallback(() => {
-    if (server) {
+    if (!server || voiceLoading) return;
+    const nickname = perServerNickname.length ? perServerNickname : nickName;
+    const isIrxServer = server.port === 7777 &&
+      (server.ip === "play.irautox.ir" || server.ip === "5.57.37.122");
+    const continueConnect = async () => {
       if (server.hasPassword && password.length) {
-        const srvCpy = { ...server };
-        srvCpy.password = password;
-
+        const srvCpy = { ...server, password };
         updateServer(srvCpy);
         updateInFavoritesList(srvCpy);
         updateInRecentlyJoinedList(srvCpy);
       }
-
-      startGame(
-        server,
-        perServerNickname.length ? perServerNickname : nickName,
-        gtasaPath,
-        server.hasPassword ? password : ""
-      );
+      if (isIrxServer && gtasaPath && nickname &&
+        (await fs.exists(await path.join(gtasaPath, "gta_sa.exe")))) {
+        setVoiceLoading(true);
+        setVoiceProgress(0);
+        try {
+          await ensureIrxVoice(gtasaPath, setVoiceProgress);
+        } catch (error) {
+          showMessageBox({ title: "iRxVoice", description: String(error),
+            buttons: [{ title: t("close"), onPress: hideMessageBox }] });
+          setVoiceLoading(false);
+          return;
+        }
+        setVoiceLoading(false);
+      }
+      await startGame(server, nickname, gtasaPath, server.hasPassword ? password : "");
       showPrompt(false);
+    };
+    if (isIrxServer) {
+      showMessageBox({
+        title: "iRxVoice",
+        description: "برای ورود به این سرور نیازمند پلاگین اختصاصی ویس چت هستید",
+        buttons: [
+          { title: t("cancel"), onPress: hideMessageBox },
+          { title: t("continue"), onPress: () => { hideMessageBox(); void continueConnect(); } },
+        ],
+      });
+      return;
     }
-  }, [
-    server,
-    password,
-    perServerNickname,
-    nickName,
-    gtasaPath,
-    updateServer,
-    updateInFavoritesList,
-    updateInRecentlyJoinedList,
-    showPrompt,
-  ]);
+    void continueConnect();
+  }, [server, voiceLoading, password, perServerNickname, nickName, gtasaPath,
+    updateServer, updateInFavoritesList, updateInRecentlyJoinedList, showPrompt,
+    showMessageBox, hideMessageBox]);
 
   const handleVersionChange = useCallback(
     async (value: string) => {
@@ -403,6 +422,10 @@ const JoinServerPrompt = () => {
               {t("connect")}
             </Text>
           </TouchableOpacity>
+          {voiceLoading && <View style={styles.voiceLoadingOverlay}>
+            <Text semibold color="#FFFFFF" size={3}>در حال دریافت و نصب iRxVoice...</Text>
+            <Text color="#FFFFFF" size={2}>{Math.round(voiceProgress)}%</Text>
+          </View>}
           <View style={styles.versionSection}>
             <Text semibold color={theme.textPrimary} size={2}>
               {t("samp_version")}:
@@ -558,6 +581,7 @@ const styles = StyleSheet.create({
     height: sc(30),
     flex: 1,
   },
+  voiceLoadingOverlay: { position: "absolute", top: sc(25), left: 0, right: 0, bottom: sc(-35), zIndex: 200, backgroundColor: "#111923F2", borderRadius: sc(8), alignItems: "center", justifyContent: "center" },
   overlay: {
     top: sc(80),
     bottom: sc(20),

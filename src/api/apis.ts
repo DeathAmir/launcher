@@ -2,6 +2,7 @@ import api from "../api/config";
 import { UpdateInfo } from "../states/app";
 import { mapAPIResponseServerListToAppStructure } from "../utils/helpers";
 import { Log } from "../utils/logger";
+import { PING_TIMEOUT_VALUE } from "../utils/query";
 import { APIResponseServer, Server } from "../utils/types";
 
 interface ApiResponse<T> {
@@ -11,31 +12,17 @@ interface ApiResponse<T> {
 }
 
 export const getCachedList = async (): Promise<ApiResponse<Server[]>> => {
-  try {
-    const response = await api.get<APIResponseServer[]>("/servers/full");
-
-    if (!Array.isArray(response.data)) {
-      Log.debug("Invalid API response: expected array");
-      return { success: false, data: [], error: "Invalid response format" };
-    }
-
-    const restructuredList = mapAPIResponseServerListToAppStructure(
-      response.data
-    );
-
-    // Update server store with the fetched data
-    const { useServers } = await import("../states/servers");
-    useServers.getState().setServers(restructuredList);
-
-    return { success: true, data: restructuredList };
-  } catch (error) {
-    Log.debug("Failed to fetch server list:", error);
-    return {
-      success: false,
-      data: [],
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+  const server: Server = {
+    ip: "play.irautox.ir", port: 7777, hostname: "IRAutoX",
+    playerCount: 0, maxPlayers: 100, gameMode: "IRAutoX", language: "Persian",
+    hasPassword: false, version: "0.3.7", usingOmp: false, partner: true,
+    ping: PING_TIMEOUT_VALUE, players: [], password: "", rules: {},
+  };
+  const { useServers, usePersistentServers } = await import("../states/servers");
+  useServers.getState().setServers([server]);
+  usePersistentServers.getState().setFavoritesList([server]);
+  usePersistentServers.getState().addToRecentlyJoined(server);
+  return { success: true, data: [server] };
 };
 
 export const getUpdateInfo = async (): Promise<
